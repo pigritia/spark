@@ -100,7 +100,6 @@ class SQLQuerySuite extends QueryTest {
     )
   }
 
-
   // No support for primitive nulls yet.
   ignore("null count") {
     checkAnswer(
