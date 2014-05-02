@@ -93,6 +93,13 @@ class SQLQuerySuite extends QueryTest {
     )
   }
 
+  test("countapprox") {
+    checkAnswer(
+      sql("SELECT COUNTAPPROX(*) FROM testData"),
+      testData.count()
+    )
+  }
+
   // No support for primitive nulls yet.
   ignore("null count") {
     checkAnswer(
