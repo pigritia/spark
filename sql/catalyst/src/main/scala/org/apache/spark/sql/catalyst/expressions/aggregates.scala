@@ -111,6 +111,28 @@ case class CountDistinct(expressions: Seq[Expression]) extends AggregateExpressi
   override def newInstance()= new CountDistinctFunction(expressions, this)
 }
 
+case class HLLCount(child: Expression)
+  extends AggregateExpression with trees.UnaryNode[Expression] {
+
+  override def references = child.references
+  override def nullable = false
+  override def dataType = IntegerType
+  override def toString = s"HLLCOUNT($child)"
+
+  override def newInstance()= new HLLCountFunction(child, this)
+}
+
+case class HLLSum(child: Expression)
+  extends AggregateExpression with trees.UnaryNode[Expression] {
+
+  override def references = child.references
+  override def nullable = false
+  override def dataType = IntegerType
+  override def toString = s"HLLSUM($child)"
+
+  override def newInstance()= new HLLSumFunction(child, this)
+}
+
 case class ApproxCountDistinct(child: Expression) extends PartialAggregate with trees.UnaryNode[Expression] {
   override def references = child.references
   override def nullable = false
@@ -118,7 +140,7 @@ case class ApproxCountDistinct(child: Expression) extends PartialAggregate with 
   override def toString = s"COUNTAPPROX($child)"
 
   override def asPartial: SplitEvaluation = {
-    val partialCount = Alias(ApproxCountDistinct(child), "PartialCount")()
+    val partialCount = Alias(HLLCount(child), "PartialCount")()
     SplitEvaluation(Sum(partialCount.toAttribute), partialCount :: Nil)
   }
 
@@ -236,6 +258,36 @@ case class ApproxCountDistinctFunction(expr: Expression, base: AggregateExpressi
 
   override def eval(input: Row): Any = seen.value.cardinality().toInt
 }
+
+case class HLLCountFunction(expr: Expression, base: AggregateExpression) extends AggregateFunction {
+  def this() = this(null, null) // Required for serialization.
+
+  val seen = new SerializableHyperLogLog(new HyperLogLog(0.01))
+
+  override def update(input: Row): Unit = {
+    val evaluatedExpr = expr.map(_.eval(input))
+    if (evaluatedExpr.map(_ != null).reduceLeft(_ || _)) {
+      seen.add(input)
+    }
+  }
+
+  override def eval(input: Row): Any = seen
+}
+
+case class HLLSumFunction(expr: Expression, base: AggregateExpression) extends AggregateFunction {
+  def this() = this(null, null) // Required for serialization.
+
+  val seen = new SerializableHyperLogLog(new HyperLogLog(0.01))
+
+  override def update(input: Row): Unit = {
+    val evaluatedExpr = expr.map(_.eval(input))
+    seen.merge(evaluatedExpr.asInstanceOf[SerializableHyperLogLog])
+  }
+
+  override def eval(input: Row): Any = seen.value.cardinality().toInt
+}
+
+
 
 case class SumFunction(expr: Expression, base: AggregateExpression) extends AggregateFunction {
   def this() = this(null, null) // Required for serialization.
