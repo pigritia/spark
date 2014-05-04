@@ -116,7 +116,7 @@ case class HLLCount(child: Expression)
 
   override def references = child.references
   override def nullable = false
-  override def dataType = IntegerType
+  override def dataType = HLLType
   override def toString = s"HLLCOUNT($child)"
 
   override def newInstance()= new HLLCountFunction(child, this)
@@ -141,7 +141,7 @@ case class ApproxCountDistinct(child: Expression) extends PartialAggregate with 
 
   override def asPartial: SplitEvaluation = {
     val partialCount = Alias(HLLCount(child), "PartialCount")()
-    SplitEvaluation(Sum(partialCount.toAttribute), partialCount :: Nil)
+    SplitEvaluation(HLLSum(partialCount.toAttribute), partialCount :: Nil)
   }
 
   override def newInstance()= new ApproxCountDistinctFunction(child, this)
@@ -277,11 +277,14 @@ case class HLLCountFunction(expr: Expression, base: AggregateExpression) extends
 case class HLLSumFunction(expr: Expression, base: AggregateExpression) extends AggregateFunction {
   def this() = this(null, null) // Required for serialization.
 
-  val seen = new SerializableHyperLogLog(new HyperLogLog(0.01))
+  var seen : SerializableHyperLogLog = _
 
   override def update(input: Row): Unit = {
-    val evaluatedExpr = expr.map(_.eval(input))
-    seen.merge(evaluatedExpr.asInstanceOf[SerializableHyperLogLog])
+    if (seen == null) {
+      seen = expr.eval(input).asInstanceOf[SerializableHyperLogLog]
+    } else {
+      seen.merge(expr.eval(input).asInstanceOf[SerializableHyperLogLog])
+    }
   }
 
   override def eval(input: Row): Any = seen.value.cardinality().toInt

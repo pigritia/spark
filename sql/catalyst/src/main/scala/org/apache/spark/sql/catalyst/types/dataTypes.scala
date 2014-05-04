@@ -22,6 +22,7 @@ import java.sql.Timestamp
 import scala.reflect.runtime.universe.{typeTag, TypeTag}
 
 import org.apache.spark.sql.catalyst.expressions.Expression
+import org.apache.spark.util.SerializableHyperLogLog
 
 abstract class DataType {
   /** Matches any expression that evaluates to this DataType */
@@ -44,8 +45,13 @@ case object StringType extends NativeType {
   @transient lazy val tag = typeTag[JvmType]
   val ordering = implicitly[Ordering[JvmType]]
 }
+
 case object BinaryType extends DataType {
   type JvmType = Array[Byte]
+}
+
+case object HLLType extends  DataType {
+  type JvmType = SerializableHyperLogLog
 }
 case object BooleanType extends NativeType {
   type JvmType = Boolean
