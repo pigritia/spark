@@ -93,6 +93,13 @@ class SQLQuerySuite extends QueryTest {
     )
   }
 
+  test("countapprox with duplicate numbers") {
+    checkAnswer(
+      sql("SELECT COUNTAPPROX(a) FROM testData2"),
+      testData2.count()/2
+    )
+  }
+
   // No support for primitive nulls yet.
   ignore("null count") {
     checkAnswer(
@@ -112,6 +119,13 @@ class SQLQuerySuite extends QueryTest {
         (2, "B", 2, "b"),
         (3, "C", 3, "c"),
         (4, "D", 4, "d")))
+  }
+
+  test("countapprox with distinct numbers") {
+    checkAnswer(
+      sql("SELECT COUNTAPPROX(N) FROM upperCaseData"),
+      upperCaseData.count()
+    )
   }
 
   test("inner join ON, one match per row") {

@@ -97,6 +97,7 @@ class SqlParser extends StandardTokenParsers with PackratParsers {
   protected val BY = Keyword("BY")
   protected val CAST = Keyword("CAST")
   protected val COUNT = Keyword("COUNT")
+  protected val COUNTAPPROX = Keyword("COUNTAPPROX")
   protected val DESC = Keyword("DESC")
   protected val DISTINCT = Keyword("DISTINCT")
   protected val FALSE = Keyword("FALSE")
@@ -316,6 +317,7 @@ class SqlParser extends StandardTokenParsers with PackratParsers {
     COUNT ~> "(" ~ "*" <~ ")" ^^ { case _ => Count(Literal(1)) } |
     COUNT ~> "(" ~ expression <~ ")" ^^ { case dist ~ exp => Count(exp) } |
     COUNT ~> "(" ~> DISTINCT ~> expression <~ ")" ^^ { case exp => CountDistinct(exp :: Nil) } |
+    COUNTAPPROX ~> "(" ~ expression <~ ")" ^^ { case dist ~ exp => ApproxCountDistinct(exp) } |
     FIRST ~> "(" ~> expression <~ ")" ^^ { case exp => First(exp) } |
     AVG ~> "(" ~> expression <~ ")" ^^ { case exp => Average(exp) } |
     IF ~> "(" ~> expression ~ "," ~ expression ~ "," ~ expression <~ ")" ^^ {
